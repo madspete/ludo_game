@@ -16,30 +16,22 @@ while not there_is_a_winner:
     pieces = np.append(enemy_pieces, [player_pieces], axis=0)
     if player_i == 1:
         if len(move_pieces):
-            home = input_states.home(player_pieces)
-            goal_zone = input_states.goal_zone(player_pieces)
-            unsafe = input_states.unsafe(player_pieces, enemy_pieces)
-            danger = input_states.in_danger(player_pieces, enemy_pieces)
-            goal = input_states.goal(player_pieces)
-            safe = input_states.safe(player_pieces)
-            can_die = input_states.can_die(player_pieces, dice, enemy_pieces)
-            print(dice)
-            print(f"can die {input_states.can_die(player_pieces, dice, enemy_pieces)}")
-            print(f"can get on globe {input_states.can_get_on_globe(pieces, dice, can_die)}")
-            print(f"can get on star {input_states.can_reach_star(pieces, dice, can_die)}")
-            print(f"can reach goal {input_states.can_reach_goal_zone(pieces, dice)}")
-            print(f"can get out of home {input_states.can_get_out_of_home(pieces, dice)}")
-            print(f"can kill an enemy {input_states.can_kill(pieces, dice, enemy_pieces, can_die)}")
-            print(f"can protect {input_states.can_protect(pieces, dice)}")
-            print(f"can reach goal {input_states.can_reach_goal(pieces, dice)}")
-            print(f"can move out off danger {input_states.move_out_of_danger(pieces, dice, danger)}")
-            print(f"can move piece clostes to home {input_states.move_closets_piece(pieces, dice, can_die)}")
-            print(f"can move piece clostes to home {input_states.miss_goal(pieces, dice, goal_zone)}")
+            states = []
+            actions = []
+            for i in range(len(player_pieces)):
+                pos = player_pieces[i]
+                other_pieces = []
+                for j in range(len(player_pieces)):
+                    if j == i:
+                        continue
+                    other_pieces.append(player_pieces[j])
+                states.append(input_states.get_state(pos, other_pieces, enemy_pieces))
+                actions.append(input_states.get_action(states[i], pos, dice, other_pieces, enemy_pieces))
+            print(f"state {states}")
+            print(f"actions {actions}")
+            #print(f"possible rewards {input_states.get_reward(actions[0])} {input_states.get_reward(actions[1])} {input_states.get_reward(actions[2])} {input_states.get_reward(actions[3])}")
 
             if len(move_pieces) == 4:
-                enemy_at_pos, enemy_list = get_enemy_at_pos(27, enemy_pieces)
-                print(f"enemies at pos {enemy_at_pos} and list {enemy_list}")
-                print(f"positions of the pieces {player_pieces}")
                 print(f"Availabe pieces to move {move_pieces}, chose one of them")
                 img = ludopy.visualizer.make_img_of_board(pieces, dice, 3, round)
                 img = cv2.resize(img, (1088,900))
@@ -59,9 +51,6 @@ while not there_is_a_winner:
                 if piece_to_move == None:
                     raise Exception("invalid input")
             else:
-                enemy_at_pos, enemy_list = get_enemy_at_pos(27, enemy_pieces)
-                print(f"enemies at pos {enemy_at_pos} and list {enemy_list}")
-                print(f"positions of the pieces {player_pieces}")
                 print(f"Availabe pieces to move {move_pieces}, chose one of them")
                 waitkeys = []
                 for i in range(len(move_pieces)):

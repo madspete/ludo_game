@@ -1,29 +1,23 @@
 import numpy
 import itertools
-
-STATES = ["goal", "home", "safe", "unsafe", "danger", "goal zone"]
-ACTIONS = ["move_out", "goal_zone", "star", "globe", "protect", "kill", "goal", "move closets piece", "die", "miss goal", "nothing", "move out of danger"]
+from stateAndActions import States, Actions
 		
 class Qtable:
 	def __init__(self):
-		self.__states = list(itertools.combinations_with_replacement(STATES, 4))
-		self.__q_table = numpy.zeros((len(self.__states),len(ACTIONS)))
+		states = []
+		for data in States:
+			states.append(data.name)
+		self.__states = list(itertools.combinations_with_replacement(states, 4))
+		self.__q_table = numpy.zeros((len(self.__states),len(Actions)))
 
-	def get_index(self, in_goal, home, safe, unsafe, danger, goal_zone):
+	def get_index(self, states):
 		comb = []
-		for i in range(in_goal):
-			comb.append("goal")
-		for i in range(home):
-			comb.append("home")
-		for _ in range(safe):
-			comb.append("safe")
-		for _ in range(unsafe):
-			comb.append("unsafe")
-		for _ in range(danger):
-			comb.append("danger")
-		for _ in range(goal_zone):
-			comb.append("goal zone")
-		
+		# We need to make sure the list has the correct order
+		for data in States:
+			cur_count = states.count(data)
+			for _ in range(cur_count):
+				comb.append(data.name)
+
 		if len(comb) != 4:
 			raise Exception("invalid combination size")
 		comb = tuple(comb)
@@ -34,9 +28,9 @@ class Qtable:
 		"""Returns all the values at the specific state."""
 		return self.__q_table[index]
 
-	def set_value(self, index, values):
-		"""Set all the values at a specific index"""
-		self.__q_table[index] = values
+	def set_value(self, index, action, value):
+		"""Set the value at a specific index"""
+		self.__q_table[index][action.value] = value
 
 	def save_values(self, file_name):
 		file = open(file_name, "w")
@@ -68,6 +62,7 @@ class Qtable:
 		for i in range(len(self.__states)):
 			res = all(x == y for x, y in zip(comb, self.__states[i]))
 			if res:
+				print(self.__states[i])
 				index = i
 				break
 		if index == None:
@@ -78,7 +73,10 @@ class Qtable:
 # Used for testing the class
 if __name__ == '__main__':
 	q_table = Qtable()
-	states = list(itertools.combinations_with_replacement(STATES, 4))
+	states = []
+	for data in States:
+		states.append(data.name)
+	states = list(itertools.combinations_with_replacement(states, 4))
 	for i in range(len(states)):
 		goal_count = 0
 		home_count = 0 
@@ -86,22 +84,21 @@ if __name__ == '__main__':
 		unsafe_count = 0
 		danger_count = 0
 		goal_zone_count = 0
+		cur_state = []
 		for j in range(len(states[i])):
-			if states[i][j] == "goal":
-				goal_count = goal_count + 1
-			elif states[i][j] == "home":
-				home_count = home_count + 1
-			elif states[i][j] == "safe":
-				safe_count = safe_count + 1
-			elif states[i][j] == "unsafe":
-				unsafe_count = unsafe_count + 1
-			elif states[i][j] == "danger":
-				danger_count = danger_count + 1
-			elif states[i][j] == "goal zone":
-				goal_zone_count = goal_zone_count + 1
+			if states[i][j] == States.GOAL.name:
+				cur_state.append(States.GOAL)
+			elif states[i][j] == States.HOME.name:
+				cur_state.append(States.HOME)
+			elif states[i][j] == States.SAFE.name:
+				cur_state.append(States.SAFE)
+			elif states[i][j] == States.DANGER.name:
+				cur_state.append(States.DANGER)
+			elif states[i][j] == States.GOAL_ZONE.name:
+				cur_state.append(States.GOAL_ZONE)
 
-		q_table.get_index(goal_count, home_count, safe_count, unsafe_count, danger_count, goal_zone_count)
-	q_table.set_value(12, [2,2,2,2,2,2,2,2,2,2,2,2])
+		index = q_table.get_index(cur_state)
+	q_table.set_value(12, [2,2,2,2,2,2,2,2,2,2,2,2,2])
 	q_table.save_values("q_table.txt")
 	q_table.load_values("q_table.txt")
 	print(q_table.get_values(12))
