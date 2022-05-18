@@ -62,43 +62,21 @@ class Qtable:
 		for i in range(len(self.__states)):
 			res = all(x == y for x, y in zip(comb, self.__states[i]))
 			if res:
-				print(self.__states[i])
 				index = i
 				break
 		if index == None:
 			raise Exception("Unable to find combination")
 
 		return index
+	
+	def write_states_to_file(self):
+		file1 = open("q_table_name.txt", "w")
+		for i in range(len(self.__states)):
+			file1.write(str(self.__states[i]))
+			file1.write("\n")
+		file1.close()
 
 # Used for testing the class
 if __name__ == '__main__':
 	q_table = Qtable()
-	states = []
-	for data in States:
-		states.append(data.name)
-	states = list(itertools.combinations_with_replacement(states, 4))
-	for i in range(len(states)):
-		goal_count = 0
-		home_count = 0 
-		safe_count = 0
-		unsafe_count = 0
-		danger_count = 0
-		goal_zone_count = 0
-		cur_state = []
-		for j in range(len(states[i])):
-			if states[i][j] == States.GOAL.name:
-				cur_state.append(States.GOAL)
-			elif states[i][j] == States.HOME.name:
-				cur_state.append(States.HOME)
-			elif states[i][j] == States.SAFE.name:
-				cur_state.append(States.SAFE)
-			elif states[i][j] == States.DANGER.name:
-				cur_state.append(States.DANGER)
-			elif states[i][j] == States.GOAL_ZONE.name:
-				cur_state.append(States.GOAL_ZONE)
-
-		index = q_table.get_index(cur_state)
-	q_table.set_value(12, [2,2,2,2,2,2,2,2,2,2,2,2,2])
-	q_table.save_values("q_table.txt")
-	q_table.load_values("q_table.txt")
-	print(q_table.get_values(12))
+	q_table.write_states_to_file()	

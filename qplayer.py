@@ -1,11 +1,9 @@
-from tkinter import N
 import numpy
-from stateAndActions import StateAndActions, Actions, REWARDS
-from qtable import Qtable
+from stateAndActions import StateAndActions, Actions, REWARDS, States, STATE_REWARDS
 from players import Player
 
 class Qplayer(Player):
-	def __init__(self, learn=True, discount_factor = 0.8, learning_rate=0.1, epsilon=0.1):
+	def __init__(self, learn=True, discount_factor = 0.6, learning_rate=0.1, epsilon=1.0, decay_rate=0.9995):
 		self.learn = learn
 
 		if (discount_factor < 0.0 or discount_factor > 1.0):
@@ -18,10 +16,16 @@ class Qplayer(Player):
 			raise Exception("Epsilon shold be betwen 0 and 1")
 		self.epsilon = epsilon
 		self.state_and_action = StateAndActions()
-		self.q_table = Qtable()
 		self.q_index = -1
 		self.reward = -1
 		self.action = None
+		self.reward_list = []
+		self.exploration_rate_decay = decay_rate
+		self.min_epsilon = 0.1
+		self.Q = numpy.zeros([len(States)*4, len(Actions)])
+		print(self.Q.shape)
+		self.piece_to_move = -1
+		self.q_value_changes = 0
 
 	def set_learning_rate(self, learning_rate):
 		if (learning_rate < 0.0 or learning_rate > 1.0):
@@ -40,76 +44,67 @@ class Qplayer(Player):
 	
 	def choose_move(self, player_pieces, enemy_pieces, dice, move_pieces):
 		"""Choose which piece to move."""
-		piece_to_move = -1
+		self.piece_to_move = -1
 		# Get state
+		state_vector, action_vector, q_values, indices = self.get_state_and_actions(player_pieces, dice, enemy_pieces)
 
-		state_vector = self.get_state(player_pieces, enemy_pieces)
-		self.q_index = self.q_table.get_index(state_vector)
-		q_values = self.q_table.get_values(self.q_index)
-
-		# Get possible actions
-		action_vector = []
-		for i in range(len(player_pieces)):
-			other_pieces = []
-			for j in range(len(player_pieces)):
-				if j == i:
-					continue
-				other_pieces.append(player_pieces[j])	
-			action_vector.append(self.state_and_action.get_action(state_vector[i], player_pieces[i], dice, other_pieces, enemy_pieces))
-		
-		# Extract the possible actions to a list
-		possible_actions = []
-		available_q_values = []
-		piece = []
-		for i in range(len(action_vector)):
-			for j in range(len(action_vector[i])):
-				if action_vector[i][j] != Actions.NOTHING:
-					possible_actions.append(action_vector[i][j])
-					available_q_values.append(q_values[action_vector[i][j].value])
-					piece.append(i)
-
-		# No moves available	
-		if len(available_q_values) == 0:
+		# Just figure out how to choose an action and that stuff
+		# No moves available
+		if not len(move_pieces):
 			self.action = None
-			return piece_to_move
+			return self.piece_to_move
 
 		# Exploration
-		if self.learn and numpy.random.random() < self.epsilon:
+		if self.learn and numpy.random.random() <= self.epsilon:
 			# Choose random among possible actions
-			possible_actions = numpy.array(possible_actions)
-			index = numpy.random.choice(numpy.arange(possible_actions.size))
-			piece_to_move = piece[index]
+			index = numpy.random.choice(numpy.arange(len(action_vector)))
+			self.piece_to_move = indices[index]
 			self.q_value = q_values[index]
-			self.reward = REWARDS[int(possible_actions[index].value)]
-			self.action = possible_actions[index]
+			self.reward = REWARDS[int(action_vector[index].value)] + STATE_REWARDS[state_vector[self.piece_to_move].value]
+			self.action = action_vector[index]
+			self.state = state_vector[indices[index]]
 		# Exploitation
 		else:
 			# Chose maximum q value, if there are multiple chose randomely among them
-			indices = [index for index, item in enumerate(available_q_values) if item == max(available_q_values)]
-			if len(indices) > 1:
-				index = numpy.random.choice(indices)
-				piece_to_move = piece[index]
+			max_value_index = [index for index, item in enumerate(q_values) if item == max(q_values)]
+			if len(max_value_index) > 1:
+				index = numpy.random.choice(max_value_index)
+				self.piece_to_move = indices[index]
 				self.q_value = q_values[index]
-				self.reward = REWARDS[int(possible_actions[index].value)]
-				self.action = possible_actions[index]
+				self.reward = REWARDS[int(action_vector[index].value)] + STATE_REWARDS[state_vector[self.piece_to_move].value]
+				self.action = action_vector[index]
+				self.state = state_vector[indices[index]]
 			else:
-				piece_to_move = piece[indices[0]]
-				self.q_value = q_values[indices[0]]
-				self.reward = REWARDS[int(possible_actions[indices[0]].value)]
-				self.action = possible_actions[indices[0]]			
+				self.piece_to_move = indices[max_value_index[0]]
+				self.q_value = q_values[max_value_index[0]]
+				self.reward = REWARDS[int(action_vector[max_value_index[0]].value)] + STATE_REWARDS[state_vector[self.piece_to_move].value]
+				self.action = action_vector[max_value_index[0]]
+				self.state = state_vector[indices[max_value_index[0]]]	
 
-		return piece_to_move
+		return self.piece_to_move
 
 	def do_learn(self, player_pieces, enemy_pieces):
-		if self.action == None or self.do_learn == False:
+		if self.learn == False:
 			return
-		state_vector = self.get_state(player_pieces, enemy_pieces)
-		new_q_index = self.q_table.get_index(state_vector)
-		updated_q_value = self.learning_rate * (self.reward + self.discount_factor*max(self.q_table.get_values(new_q_index)) - self.q_value)
-		self.q_table.set_value(self.q_index, self.action, updated_q_value)
+
+		# If action is nothing, then no update is nescerray
+		if self.action == None:
+			return
+
+		new_state = self.get_state(player_pieces, enemy_pieces, self.piece_to_move)
+		max_new_q_value = max(self.get_q_values(new_state, self.piece_to_move))
+
+		updated_q_value = self.learning_rate * (self.reward + self.discount_factor*max_new_q_value - self.q_value)
+		self.q_value_changes += updated_q_value
+		updated_q_value = self.q_value + updated_q_value
+		self.set_q_value(self.state, self.piece_to_move, self.action, updated_q_value)
+		self.reward_list.append(self.reward)
 			
-	def get_state(self, player_pieces, enemy_pieces):
+	def get_state_and_actions(self, player_pieces, dice, enemy_pieces):
 		state_vector = []
+		action_vector = []
+		q_values = []
+		indicies = []
 		for i in range(len(player_pieces)):
 			other_pieces = []
 			for j in range(len(player_pieces)):
@@ -118,12 +113,79 @@ class Qplayer(Player):
 				other_pieces.append(player_pieces[j])
 
 			state_vector.append(self.state_and_action.get_state(player_pieces[i],other_pieces, enemy_pieces))
+			cur_actions = self.state_and_action.get_action(state_vector[i], player_pieces[i], dice, other_pieces, enemy_pieces)
+			if len(cur_actions) > 1 or cur_actions[0] != Actions.NOTHING:
+				indicies += [i]*len(cur_actions)
+				action_vector += cur_actions
+				q_values += self.get_available_q_values(state_vector[i], i, cur_actions)
 		
-		return state_vector
+		return state_vector, action_vector, q_values, indicies
 	
+	def get_state(self, player_pieces, enemy_pieces, index):
+		other_pieces = []
+		for j in range(len(player_pieces)):
+			if j == index:
+				continue
+			other_pieces.append(player_pieces[j])
+		
+		state = self.state_and_action.get_state(player_pieces[index], other_pieces, enemy_pieces)
+		return state
+
 	def save_q_table(self):
-		self.q_table.save_values("q_table.txt")
+		numpy.savetxt("q_table.txt", self.Q)
 
 	def load_q_table(self):
-		self.q_table.load_values("q_table.txt")
+		self.Q = numpy.loadtxt("q_table.txt")
+		print(self.Q*10)
 
+	def reset(self):
+		self.q_index = -1
+		self.reward = -1
+		self.action = None
+		self.reward_list = []
+		self.piece_to_move = -1
+		self.q_value_changes = 0
+
+	def get_mean_rewards(self):
+		if not len(self.reward_list):
+			return 0.0
+		return sum(self.reward_list) / len(self.reward_list)
+	
+	def decrease_exploration_rate(self):
+		if self.exploration_rate_decay == 0.0:
+			return
+		self.epsilon = self.epsilon * self.exploration_rate_decay
+		self.epsilon = max(self.epsilon, self.min_epsilon)
+		print(self.epsilon)
+	
+	def get_available_q_values(self, state, index, actions):
+		q_values = []
+		q_index = state.value + len(States)*index
+		for i in range(len(actions)):
+			q_values.append(self.Q[q_index][actions[i].value])
+		
+		return q_values
+	
+	def get_q_values(self, state, index):
+		return self.Q[state.value + len(States)*index]
+	
+	def set_q_value(self, state, index, action, value):
+		self.Q[state.value + len(States)*index][action.value] = value
+	
+	def average_q_values(self):
+		for i in range(len(Actions) - 1):
+			for j in range(len(States)):
+				temp = 0
+				for k in range(4):
+					temp += self.Q[j+len(States)*k][i]
+				
+				self.Q[j][i] = temp/4
+				self.Q[j+len(States)][i] = temp/4
+				self.Q[j+len(States)*2][i] = temp/4
+				self.Q[j+len(States)*3][i] = temp/4
+	
+	def get_q_value_changes(self):
+		return self.q_value_changes
+	
+	def stop_learning(self):
+		self.learn = False

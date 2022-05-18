@@ -1,21 +1,27 @@
 from ludopy.player import get_enemy_at_pos
 from enum import Enum
 
-from numpy import empty
-
 # Implement the actions aswell, almost done but need to handle what to do if we are at home position, since the dice will not move it 6 pieces.
 # Served a bit of inspiration https://github.com/NDurocher/YARAL/blob/main/src/Qlearn.py
 # This also served as a bit of information https://www.researchgate.net/publication/261279306_TDl_and_Q-learning_based_Ludo_players
 # If just one of the tokens has normal move, then move_piece_closets should be available.
+# I think that you should just make a q table for each piece instead
 
-REWARDS = [0.5, 0.8, -0.01, 0.45, -0.8, 0.35, 0.4, 0.4, 0.3, 0.01, 0.38, -0.01, 0.0]
+# Modify the rewards depending on the state
+#REWARDS = [0.5, 1.0, -0.01, 0.45, -0.5, 0.35, 0.4, 0.4, 0.3, 0.05, 0.38, -0.01, 0.0] # These rewards gives a very good results
+REWARDS = [0.5, 1.0, -0.25, 0.4, -0.6, 0.2, 0.25, 0.2, 0.0000001, 0.15, -0.2, 0.0]
+STATE_REWARDS = [0.0, 0.0, 0.0, 0.0, 0.1, 0.01, 0.0]
+# You can make an array with states, that you addd to the current reward to optimize it, this will give a better approach, that was a very good idea
+# Reduce the other rewards so they are further away from goal otherwise goal will never be prioritized in the other states.
 
 class States(Enum):
-	HOME = 0,
-	GOAL = 1,
-	GOAL_ZONE = 2,
-	SAFE = 3,
+	HOME = 0
+	GOAL = 1
+	GOAL_ZONE = 2
+	SAFE = 3
 	DANGER = 4
+	UNSAFE = 5
+	CLOSE_TO_GOAL = 6
 
 class Actions(Enum):
 	MOVE_OUT = 0
@@ -24,13 +30,12 @@ class Actions(Enum):
 	GOAL_ZONE = 3
 	DIE = 4
 	STAR = 5
-	GLOBE = 6
-	PROTECT = 7
-	KILL = 8
-	NORMAL_MOVE = 9
-	MOVE_OUT_OF_DANGER = 10
-	MOVE_DANGER = 11
-	NOTHING = 12
+	PROTECT = 6
+	KILL = 7
+	NORMAL_MOVE = 8
+	MOVE_OUT_OF_DANGER = 9
+	MOVE_DANGER = 10
+	NOTHING = 11
 
 class StateAndActions:
 	def __init__(self):
@@ -46,13 +51,15 @@ class StateAndActions:
 			state = States.GOAL
 		elif self.goal_zone(pos):
 			state = States.GOAL_ZONE
+		elif self.close_to_goal(pos):
+			state = States.CLOSE_TO_GOAL
 		elif self.safe(pos, other_pieces):
 			state = States.SAFE
 		elif self.in_danger(pos, enemy_pieces):
 			state = States.DANGER
-		# If we are not in danger then we are safe
+		# If we are not in danger then we are Unsafe
 		else:
-			state = States.SAFE
+			state = States.UNSAFE
 		
 		return state
 
@@ -91,9 +98,7 @@ class StateAndActions:
 				return action
 			if self.can_reach_star(pos, dice):
 				action.append(Actions.STAR)
-			if self.can_get_on_globe(pos, dice):
-				action.append(Actions.GLOBE)
-			if self.can_protect(pos, dice, other_pieces):
+			if self.can_get_on_globe(pos, dice) or self.can_protect(pos, dice, other_pieces):
 				action.append(Actions.PROTECT)
 			if self.can_kill(pos, dice, enemy_pieces):
 				action.append(Actions.KILL)
@@ -116,19 +121,67 @@ class StateAndActions:
 				return action
 			if self.can_reach_star(pos, dice):
 				action.append(Actions.STAR)
-			if self.can_get_on_globe(pos, dice):
-				action.append(Actions.GLOBE)
-			if self.can_protect(pos, dice, other_pieces):
+			if self.can_get_on_globe(pos, dice) or self.can_protect(pos, dice, other_pieces):
 				action.append(Actions.PROTECT)
 			if self.can_kill(pos, dice, enemy_pieces):
 				action.append(Actions.KILL)
 			if self.can_move_out_of_danger(pos, dice, enemy_pieces):
 				action.append(Actions.MOVE_OUT_OF_DANGER)
 			if not action:
-				action.append(Actions.MOVE_DANGER)				
+				action.append(Actions.MOVE_DANGER)		
+
+		elif state == States.CLOSE_TO_GOAL:
+			# Goal can be reached from a star
+			if self.can_reach_goal(pos, dice, enemy_pieces):
+				action.append(Actions.GOAL)
+			# No other actions are available if we reach goal zone
+			if self.can_reach_goal_zone(pos, dice):
+				action.append(Actions.GOAL_ZONE)
+				return action
+			# No other actions are available if we die
+			if self.can_die(pos, dice, enemy_pieces):
+				action.append(Actions.DIE)
+				return action
+			if self.can_reach_star(pos, dice):
+				action.append(Actions.STAR)
+			if self.can_get_on_globe(pos, dice) or self.can_protect(pos, dice, other_pieces):
+				action.append(Actions.PROTECT)
+			if self.can_kill(pos, dice, enemy_pieces):
+				action.append(Actions.KILL)
+			if self.danger_move(pos, dice, enemy_pieces):
+				action.append(Actions.MOVE_DANGER)
+			if not action:
+				action.append(Actions.NORMAL_MOVE)
+
+		elif state == States.UNSAFE:
+			# Goal can be reached from a star
+			if self.can_reach_goal(pos, dice, enemy_pieces):
+				action.append(Actions.GOAL)
+			# No other actions are available if we reach goal zone
+			if self.can_reach_goal_zone(pos, dice):
+				action.append(Actions.GOAL_ZONE)
+				return action
+			# No other actions are available if we die
+			if self.can_die(pos, dice, enemy_pieces):
+				action.append(Actions.DIE)
+				return action
+			if self.can_reach_star(pos, dice):
+				action.append(Actions.STAR)
+			if self.can_get_on_globe(pos, dice) or self.can_protect(pos, dice, other_pieces):
+				action.append(Actions.PROTECT)
+			if self.can_kill(pos, dice, enemy_pieces):
+				action.append(Actions.KILL)
+			if self.danger_move(pos, dice, enemy_pieces):
+				action.append(Actions.MOVE_DANGER)
+			if not action:
+				action.append(Actions.NORMAL_MOVE)
 
 		return action
-	
+
+	def close_to_goal(self, pos):
+		if pos >= 45:
+			return True
+
 	def get_reward(self, action):
 		reward = REWARDS[action.value]
 		return reward	
