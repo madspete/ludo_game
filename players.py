@@ -38,17 +38,29 @@ class PlayerFast(Player):
 			piece_to_move = move_pieces[0]
 			return piece_to_move
 		elif len(move_pieces):
+			# Move to goal
 			for i in range(len(move_pieces)):
 				pos = player_pieces[move_pieces[i]]
 				if self.logic.can_reach_goal(pos, dice, enemy_pieces):
 					piece_to_move = move_pieces[i]
 					return piece_to_move
 			
+			# Move out 
 			for i in range(len(move_pieces)):
 				pos = player_pieces[move_pieces[i]]
 				if self.logic.home(pos) and self.logic.can_get_out_of_home(dice):
-					pass 
-					
+					piece_to_move = move_pieces[i]
+					return piece_to_move
+			
+			# move piece furthest ahead even if we are hit home
+			position = -1
+			for i in range(len(move_pieces)):
+				pos = player_pieces[move_pieces[i]]
+				if pos > position and not self.logic.goal(pos):
+					position = pos
+					piece_to_move = move_pieces[i]
+
+			return piece_to_move
 
 		else:
 			piece_to_move = -1

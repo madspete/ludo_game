@@ -131,11 +131,11 @@ class Qplayer(Player):
 		state = self.state_and_action.get_state(player_pieces[index], other_pieces, enemy_pieces)
 		return state
 
-	def save_q_table(self):
-		numpy.savetxt("q_table.txt", self.Q)
+	def save_q_table(self, filename="q_table.txt"):
+		numpy.savetxt(filename, self.Q)
 
-	def load_q_table(self):
-		self.Q = numpy.loadtxt("q_table.txt")
+	def load_q_table(self, filename="q_table.txt"):
+		self.Q = numpy.loadtxt(filename)
 		print(self.Q*10)
 
 	def reset(self):
