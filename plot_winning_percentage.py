@@ -4,7 +4,8 @@ import numpy as np
 
 RANDOM_PLAY = False
 SS_PLAY = False
-SELF_PLAY = True
+SELF_PLAY = False
+AGAINST_JENS = True
 
 path = ""
 path1 = ""
@@ -18,7 +19,9 @@ if SS_PLAY:
 if SELF_PLAY:
 	path = "data/win_percentage_self_against_random.txt"
 	path1 = "data/win_percentage_self_against_ss.txt"	
-
+if AGAINST_JENS:
+	path = "data/win_percentage_against_jens.txt"
+	path1 = "data/win_percentage_against_jens.txt"
 
 average_win_percentages_random = []
 average_win_percentages_ss = []
@@ -69,13 +72,13 @@ plt.figure(1)
 plt.plot(game_count, average_win_percentages_random)
 plt.xlabel("Number of games")
 plt.ylabel("Win percentage [%]")
-plt.title("Winning rate against 3 random players")
+plt.title("Average winning percentage against 3 random players")
 
 plt.figure(2)
 plt.plot(game_count, average_win_percentages_ss)
 plt.xlabel("Number of games")
 plt.ylabel("Win percentage [%]")
-plt.title("Winning rate against 3 SS-players")
+plt.title("Average winning percentage against 3 of Jens's Q-player")
 
 # Statitics 
 print(f"Mean winning percentage after 2000 games against ss players {np.mean(final_win_percentage_ss)}")

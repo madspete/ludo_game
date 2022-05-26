@@ -44,7 +44,7 @@ plt.plot(episode, win_percentage8)
 plt.xlabel("Number of games")
 plt.ylabel("Win percentage [%]")
 plt.title("Winning rate against 3 random players with different discount factors")
-plt.legend(["0.1, WP:72.4", "0.2 WP:72.5", "0.3 WP:71.5", "0.4 WP:70.3", "0.5 WP:69.9", "0.6 WP:71.3", "0.7 WP:73.6","0.8 WP:70.6","0.9 WP:53.4"], loc ="lower right")
+plt.legend(["0.1, WP:72.4 %", "0.2 WP:72.5 %", "0.3 WP:71.5 %", "0.4 WP:70.3 %", "0.5 WP:69.9 %", "0.6 WP:71.3 %", "0.7 WP:73.6 %","0.8 WP:70.6 %","0.9 WP:53.4 %"], loc ="lower right")
 
 win_percentage = []
 win_percentage1 = []
@@ -80,6 +80,6 @@ plt.plot(episode, win_percentage5)
 plt.xlabel("Number of games")
 plt.ylabel("Win percentage [%]")
 plt.title("Winning rate against 3 random players with different learning rates")
-plt.legend(["0.001 WP: 66.5", "0.01 WP: 71.7", "0.05 WP: 74.5", "0.1 WP: 72.0", "0.2 WP: 72.1", "0.3 WP: 73.0"], loc ="lower right")
+plt.legend(["0.001 WP: 66.5 %", "0.01 WP: 71.7 %", "0.05 WP: 74.5 %", "0.1 WP: 72.0 %", "0.2 WP: 72.1 %", "0.3 WP: 73.0 %"], loc ="lower right")
 
 plt.show()

@@ -1,6 +1,7 @@
 import ludopy
 import numpy as np
 import random
+
 from qplayer import Qplayer
 from players import RandomPlayer, PlayerFast
 

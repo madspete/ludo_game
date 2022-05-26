@@ -1,18 +1,8 @@
 from ludopy.player import get_enemy_at_pos
 from enum import Enum
 
-# Implement the actions aswell, almost done but need to handle what to do if we are at home position, since the dice will not move it 6 pieces.
-# Served a bit of inspiration https://github.com/NDurocher/YARAL/blob/main/src/Qlearn.py
-# This also served as a bit of information https://www.researchgate.net/publication/261279306_TDl_and_Q-learning_based_Ludo_players
-# If just one of the tokens has normal move, then move_piece_closets should be available.
-# I think that you should just make a q table for each piece instead
-
-# Modify the rewards depending on the state
-#REWARDS = [0.5, 1.0, -0.01, 0.45, -0.5, 0.35, 0.4, 0.4, 0.3, 0.05, 0.38, -0.01, 0.0] # These rewards gives a very good results
 REWARDS = [0.5, 1.0, -0.25, 0.4, -0.6, 0.2, 0.25, 0.2, 0.0000001, 0.15, -0.2, 0.0]
 STATE_REWARDS = [0.0, 0.0, 0.0, 0.0, 0.1, 0.01, 0.0]
-# You can make an array with states, that you addd to the current reward to optimize it, this will give a better approach, that was a very good idea
-# Reduce the other rewards so they are further away from goal otherwise goal will never be prioritized in the other states.
 
 class States(Enum):
 	HOME = 0
